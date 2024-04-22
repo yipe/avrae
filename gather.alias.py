@@ -11,22 +11,25 @@ embed
 #   !gather forest 20   # Gather 20 times from the forest
 
 # Constants 
-DICE = ["1", "1d2", "1d4", "1d6", "1d8", "1d8", "1d12"] 
-RARITIES = ["common", "uncommon"] 
-VARITIES = ["curative", "poisonous", "reactive", "primal", "arcane"]
+d1, d2, d4, d6, d8, d10, d12 = "1", "1d2", "1d4", "1d6", "1d8", "1d10", "1d12"
+CO, UN = "common", "uncommon"
+CU, PO, RE = "curative reagent", "poisonous reagent", "reactive reagent"
+PR, AR, DI = "primal essence", "arcane essence", "divine essence"
+
 MATERIALS = ["reagent", "essence"] 
-DICE_INDEX, RARITY_INDEX, VARIETY_INDEX, MATERIAL_INDEX = 2, 3, 4, 5 # Indices
 BIOMES = ["forest", "desert", "grasslands", "marsh", "mountains", "caves", "underground", "jungles", "shore", "tundra", "feylands", "shadowlands", "elemental plane", "lower plane", "upper plane", "outer plane"] 
 BIOME_COLORS = ["#228B22", "#FAD5A5", "#77bf80",  "#36594c", "#888888", "#272727", "#DDDDDD", "#2AAA8A", "#4f42b5", "#B4A995", "#db8b97", "<color>", "<color>", "<color>", "<color>", "<color>"]
+
+RANGE_START_INDEX, RANGE_END_INDEX, DICE_INDEX, RARITY_INDEX, VARIETY_INDEX = 0, 1, 2, 3, 4 # Indices
 REAGENTS =  [
 		[ # forest
-			[11, 20, 0, 0, 0, 0], [21, 40, 0, 0, 0, 0], [41, 50, 0, 0, 1, 0],
-			[51, 60, 0, 0, 2, 0], [61, 70, 2, 0, 1, 0], [71, 80, 2, 0, 0, 0],
-			[81, 90, 0, 1, 0, 0], [91, 95, 0, 1, 1, 0], [96, 100, 0, 1, 3, 1]],
+			[11, 20, d1, CO, CU], [21, 40, d1, CO, CU], [41, 50, d1, CO, PO],
+			[51, 60, d1, CO, RE], [61, 70, d4, CO, PO], [71, 80, d4, CO, CU],
+			[81, 90, d1, UN, CU], [91, 95, d1, UN, PO], [96, 100, d1, UN, PR]],
 		[ # desert
-			[21, 40, 0, 0, 2, 0], [41, 50, 0, 0, 0, 0], [51, 60, 0, 0, 1, 0],
-			[61, 70, 1, 0, 2, 0], [71, 80, 1, 0, 2, 0], [81, 90, 0, 1, 2, 0],
-			[91, 95, 0, 1, 1, 0], [96, 100, 0, 0, 4, 1]]
+			[21, 40, d1, CO, RE], [41, 50, d1, CO, CU], [51, 60, d1, CO, PO],
+			[61, 70, d2, CO, RE], [71, 80, d2, CO, RE], [81, 90, d1, UN, RE],
+			[91, 95, d1, UN, PO], [96, 100, d1, CO, AR]]
 	]
 
 # Prune biome list until we support them all
@@ -79,9 +82,9 @@ def roll_lookup(name, roll):
 	t = range_lookup(table, roll)
 	if t == None:
 		return ["nothing"]
-	d, r, v, m = DICE[t[DICE_INDEX]], RARITIES[t[RARITY_INDEX]], VARITIES[t[VARIETY_INDEX]], MATERIALS[t[MATERIAL_INDEX]]
+	d, r, v = t[DICE_INDEX], t[RARITY_INDEX], t[VARIETY_INDEX]
 	c = vroll(d).total
-	fname = r + " " + v + " " + m
+	fname = r + " " + v 
 	return [fname] * c
 
 def remove_items(test_list, item):
