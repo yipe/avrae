@@ -5,7 +5,6 @@ embed
 # NOTE: This script currently only supports forest and desert biome gathering of reagents.
 # NOTE: This does not do stat checks or use tool proficiencies, it is currently only the gathering table lookup
 
-
 # Usage:
 #   !gather             # Gather 1 time from the forest (default)
 #   !gather desert      # Gather 1 time from the desert
