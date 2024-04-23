@@ -2,13 +2,13 @@ embed
 <drac2>
 
 # Initial Avrae implementation of Kibble's Crafting v1.07 Gathering
-# NOTE: This script currently only supports forest and desert biome gathering of reagents.
+# NOTE: This script currently only supports gathering of reagents.
 # NOTE: This does not do stat checks or use tool proficiencies, it is currently only the gathering table lookup
 
 # Usage:
-#   !gather             # Gather 1 time from the forest (default)
-#   !gather desert      # Gather 1 time from the desert
-#   !gather forest 20   # Gather 20 times from the forest
+#   !gather             		# Gather 1 time from the forest (default)
+#   !gather desert      		# Gather 1 time from the desert
+#   !gather 'Outer Plane' 20 	# Gather 20 times from the outer plane
 
 # Constants 
 d1, d2, d4, d6, d8, d10, d12 = "1", "1d2", "1d4", "1d6", "1d8", "1d10", "1d12"
