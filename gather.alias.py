@@ -130,7 +130,7 @@ def remove_items(test_list, item):
 
 def foraged_display_name(foraged, count):
 	if count == 0:
-		return "NONE LOL"
+		return "No " + foraged + "s" # Should be impossible
 	if count == 1:
 		return "1x " + foraged
 	return str(count) + "x " + foraged + "s"
