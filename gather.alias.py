@@ -2,7 +2,7 @@ embed
 <drac2>
 
 # Initial Avrae implementation of Kibble's Crafting v1.07 Gathering
-# NOTE: This script currently only supports gathering of reagents.
+# NOTE: This script currently only supports gathering of reagents
 # NOTE: This does not do stat checks or use tool proficiencies, it is currently only the gathering table lookup
 
 # Usage:
