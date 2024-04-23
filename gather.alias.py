@@ -12,37 +12,72 @@ embed
 
 # Constants 
 d1, d2, d4, d6, d8, d10, d12 = "1", "1d2", "1d4", "1d6", "1d8", "1d10", "1d12"
-CO, UN = "common", "uncommon"
-CU, PO, RE = "curative reagent", "poisonous reagent", "reactive reagent"
-PR, AR, DI = "primal essence", "arcane essence", "divine essence"
+COMMON, UNCOMMON, RARE = "common", "uncommon", "rare"
+CURATIVE, POISONOUS, REACTIVE = "curative reagent", "poisonous reagent", "reactive reagent"
+PRIMAL, ARCANE, DIVINE = "primal essence", "arcane essence", "divine essence"
 
-MATERIALS = ["reagent", "essence"] 
-BIOMES = ["forest", "desert", "grasslands", "marsh", "mountains", "caves", "underground", "jungles", "shore", "tundra", "feylands", "shadowlands", "elemental plane", "lower plane", "upper plane", "outer plane"] 
-BIOME_COLORS = ["#228B22", "#FAD5A5", "#77bf80",  "#36594c", "#888888", "#272727", "#DDDDDD", "#2AAA8A", "#4f42b5", "#B4A995", "#db8b97", "<color>", "<color>", "<color>", "<color>", "<color>"]
-
-RANGE_START_INDEX, RANGE_END_INDEX, DICE_INDEX, RARITY_INDEX, VARIETY_INDEX = 0, 1, 2, 3, 4 # Indices
-REAGENTS =  [
-		[ # forest
-			[11, 20, d1, CO, CU], [21, 40, d1, CO, CU], [41, 50, d1, CO, PO],
-			[51, 60, d1, CO, RE], [61, 70, d4, CO, PO], [71, 80, d4, CO, CU],
-			[81, 90, d1, UN, CU], [91, 95, d1, UN, PO], [96, 100, d1, UN, PR]],
-		[ # desert
-			[21, 40, d1, CO, RE], [41, 50, d1, CO, CU], [51, 60, d1, CO, PO],
-			[61, 70, d2, CO, RE], [71, 80, d2, CO, RE], [81, 90, d1, UN, RE],
-			[91, 95, d1, UN, PO], [96, 100, d1, CO, AR]]
-	]
-
-# Prune biome list until we support them all
-BIOMES = BIOMES[0:len(REAGENTS)]
+COLOR, TABLE, DC = "color", "table", "dc"
+DICE_INDEX, RARITY_INDEX, VARIETY_INDEX = 2, 3, 4
+REAGENTS =  {
+	'forest': {COLOR: "#228B22", DC: 10, TABLE: 
+		[[11, 40, d1, COMMON, CURATIVE], [41, 50, d1, COMMON, POISONOUS], [51, 60, d1, COMMON, REACTIVE], [61, 70, d4, COMMON, POISONOUS], 
+		 [71, 80, d4, COMMON, CURATIVE], [81, 90, d1, UNCOMMON, CURATIVE], [91, 95, d1, UNCOMMON, POISONOUS], [96, 100, d1, UNCOMMON, PRIMAL]]},
+	'desert': {COLOR: "#FAD5A5", DC: 10, TABLE:
+		[[21, 40, d1, COMMON, REACTIVE], [41, 50, d1, COMMON, CURATIVE], [51, 60, d1, COMMON, POISONOUS],[61, 70, d2, COMMON, REACTIVE], 
+		 [71, 80, d2, COMMON, REACTIVE], [81, 90, d1, UNCOMMON, REACTIVE], [91, 95, d1, UNCOMMON, POISONOUS], [96, 100, d1, COMMON, ARCANE]]},
+	'grasslands': {COLOR: "#77bf80", DC: 10, TABLE:
+		[[21, 40, d1, COMMON, CURATIVE], [41, 50, d1, COMMON, REACTIVE], [51, 60, d1, COMMON, POISONOUS], [61, 70, d2, COMMON, POISONOUS], 
+		 [71, 80, d2, COMMON, REACTIVE], [81, 90, d1, UNCOMMON, REACTIVE], [91, 95, d1, UNCOMMON, POISONOUS], [96, 100, d1, COMMON, ARCANE]]},
+	'marsh': {COLOR: "#36594c", DC: 10, TABLE:
+		[[11, 40, d1, COMMON, POISONOUS], [41, 50, d1, COMMON, CURATIVE], [51, 60, d1, COMMON, REACTIVE], [61, 70, d4, COMMON, POISONOUS], 
+		 [71, 80, d4, COMMON, REACTIVE], [81, 90, d1, UNCOMMON, POISONOUS], [91, 95, d1, UNCOMMON, REACTIVE], [96, 100, d1, COMMON, PRIMAL]]},
+	'mountains': {COLOR: "#888888", DC: 10, TABLE: 
+		[[21, 40, d1, COMMON, REACTIVE], [41, 50, d1, COMMON, CURATIVE], [51, 60, d1, COMMON, POISONOUS], [61, 70, d2, COMMON, CURATIVE],
+		 [71, 80, d2, COMMON, REACTIVE], [81, 90, d1, UNCOMMON, REACTIVE], [91, 95, d1, COMMON, CURATIVE], [96, 100, d1, COMMON, PRIMAL]]},
+	'caves': {COLOR: "#272727", DC: 12, TABLE: 
+		[[11, 30, d1, COMMON, REACTIVE], [31, 50, d1, COMMON, POISONOUS], [51, 60, d4, COMMON, REACTIVE], [61, 70, d1, UNCOMMON, REACTIVE],
+		 [71, 80, d1, UNCOMMON, CURATIVE], [81, 90, d1, COMMON, DIVINE], [91, 95, d1, UNCOMMON, POISONOUS], [96, 100, d1, UNCOMMON, DIVINE]]},
+	'underground': {COLOR: "#DDDDDD", DC: 12,TABLE: 
+		[[11, 30, d1, COMMON, POISONOUS], [31, 50, d1, COMMON, REACTIVE], [51, 60, d4, COMMON, POISONOUS], [61, 70, d1, UNCOMMON, POISONOUS],
+		 [71, 80, d1, UNCOMMON, CURATIVE], [81, 90, d1, COMMON, DIVINE], [91, 95, d1, UNCOMMON, POISONOUS], [96, 100, d1, UNCOMMON, DIVINE]]},
+	'jungles': {COLOR: "#2AAA8A", DC: 12, TABLE: 
+		[[11, 30, d1, COMMON, CURATIVE], [31, 50, d1, COMMON, POISONOUS], [51, 60, d4, COMMON, CURATIVE], [61, 70, d1, UNCOMMON, CURATIVE],
+		 [71, 80, d1, UNCOMMON, REACTIVE], [81, 90, d1, COMMON, PRIMAL], [91, 95, d1, UNCOMMON, REACTIVE], [96, 100, d1, UNCOMMON, PRIMAL]]},
+	'shore': {COLOR: "#4f42b5", DC: 12, TABLE: 
+		[[11, 30, d1, COMMON, CURATIVE], [31, 50, d1, COMMON, POISONOUS], [51, 60, d4, COMMON, CURATIVE], [61, 70, d1, UNCOMMON, REACTIVE],
+		 [71, 80, d1, UNCOMMON, REACTIVE], [81, 90, d1, COMMON, PRIMAL], [91, 95, d1, UNCOMMON, REACTIVE], [96, 100, d1, UNCOMMON, PRIMAL]]},
+	'tundra': {COLOR: "#B4A995", DC: 12, TABLE: 
+		[[11, 30, d1, COMMON, REACTIVE], [31, 50, d1, COMMON, CURATIVE], [51, 60, d4, COMMON, REACTIVE], [61, 70, d1, UNCOMMON, CURATIVE],
+		 [71, 80, d1, UNCOMMON, REACTIVE], [81, 90, d1, COMMON, PRIMAL], [91, 95, d1, UNCOMMON, REACTIVE], [96, 100, d1, UNCOMMON, PRIMAL]]},
+	'feylands': {COLOR: "#db8b97", DC: 14, TABLE: 
+		[[1, 20, d1, COMMON, CURATIVE], [21, 40, d1, COMMON, REACTIVE], [41, 60, d4, COMMON, REACTIVE], 
+   		 [61, 80, d1, UNCOMMON, CURATIVE], [81, 99, d1, UNCOMMON, PRIMAL], [100, 100, d1, RARE, PRIMAL]]},
+	'shadowlands': {COLOR: "<color>", DC: 14, TABLE: 
+		[[1, 20, d1, COMMON, POISONOUS], [21, 40, d1, COMMON, REACTIVE], [41, 60, d4, COMMON, POISONOUS],
+   		 [61, 80, d1, UNCOMMON, POISONOUS], [81, 99, d1, UNCOMMON, ARCANE], [100, 100, d1, RARE, ARCANE]]},
+	'elemental plane': {COLOR: "<color>", DC: 14,  TABLE: 
+		[[1, 20, d1, COMMON, REACTIVE], [21, 40, d1, COMMON, CURATIVE], [41, 60, d4, COMMON, REACTIVE],
+   		 [61, 80, d1, UNCOMMON, REACTIVE], [81, 99, d1, UNCOMMON, PRIMAL], [100, 100, d1, RARE, PRIMAL]]},
+	'lower plane': {COLOR: "<color>", DC: 14, TABLE: 
+		[[1, 20, d1, COMMON, POISONOUS], [21, 40, d1, COMMON, REACTIVE], [41, 60, d4, COMMON, POISONOUS],
+   		 [61, 80, d1, UNCOMMON, REACTIVE], [81, 99, d1, UNCOMMON, ARCANE], [100, 100, d1, RARE, ARCANE]]},
+	'upper plane': {COLOR: "<color>", DC: 14, TABLE: 
+		[[1, 20, d1, COMMON, CURATIVE], [21, 40, d1, COMMON, REACTIVE], [41, 60, d4, COMMON, CURATIVE],
+		 [61, 80, d1, UNCOMMON, CURATIVE], [81, 99, d1, UNCOMMON, DIVINE], [100, 100, d1, UNCOMMON, DIVINE]]},
+	'outer plane': {COLOR: "<color>", DC: 14, TABLE: 
+		[[1, 20, d1, COMMON, REACTIVE], [21, 40, d1, COMMON, REACTIVE], [41, 60, d4, COMMON, REACTIVE],
+   		 [61, 80, d1, UNCOMMON, REACTIVE], [81, 99, d1, UNCOMMON, ARCANE], [100, 100, d4, RARE, ARCANE]]},
+				 
+}
 
 # Arguments
 def parse_args(args):
-    biome = BIOMES[0]
+    biome = "forest"
     count = 1
 
     arg_count = len(args)
     if arg_count > 0:
-        biome = args[0]
+        biome = args[0].lower()
         
     if arg_count > 1:
         if args[1].isnumeric():
@@ -58,11 +93,10 @@ def parse_args(args):
     return biome, count
 
 # Utility
-def biome_lookup(name):
-	if name not in BIOMES:
+def biome_table_lookup(name):
+	if name not in REAGENTS:
 		return None
-	ti = BIOMES.index(name)
-	return REAGENTS[ti]	
+	return REAGENTS[name][TABLE]
 
 def range_lookup(table, roll):
 	for row in table:
@@ -70,14 +104,17 @@ def range_lookup(table, roll):
 			return row
 	return None
 
-def color_from_name(name):
-	biome_index = BIOMES.index(name)
-	return BIOME_COLORS[biome_index]
+def color_lookup(name):
+	if name not in REAGENTS:
+		return "#FF0000"
+	return REAGENTS[name][COLOR]
 
 def roll_lookup(name, roll):
-	table = biome_lookup(name)
+	table = biome_table_lookup(name)
 	if table == None:
-			err(f"Could not find biome named '{name}'. Please choose from {', '.join(BIOMES)}.")
+			# Later pull these from the table itself
+			all_biomes = REAGENTS.keys()
+			err(f"Could not find biome named '{name}'. Please choose from {', '.join(all_biomes)}.")
 	
 	t = range_lookup(table, roll)
 	if t == None:
@@ -132,8 +169,8 @@ def count_foraged(all_foraged):
 
 def card_values(biome, rolls, found):
     dice_strings = len(rolls) + "d100 = `(" + ', '.join(rolls) + ")`"
-    color = color_from_name(biome)
-    title = f"{character().name} is gathering reagents in the {biome}"
+    color = color_lookup(biome)
+    title = f"{character().name} is gathering reagents in the {biome}."
     description = f"They found nothing!"
     if len(found) == 1:
         description = f"They found {found[0]}!"
