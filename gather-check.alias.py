@@ -5,7 +5,7 @@
 # 
 # Usage:
 # !gather-check materials 
-# !gather-check reagents pro          # When gathering reagents, you can pass in 'pro' or 'exp' if you have proficiency or epertise in the Herbalism Kit
+# !gather-check reagents pro          # When gathering reagents, you can pass in 'pro', 'prof' or 'exp' if you have proficiency or epertise in the Herbalism Kit
 # !gather-check game
 # !gather-check materials adv         # Gather with advantage (or dis for disadvantage)
 # !gather-check materials guidance    # Gather with guidance added
@@ -58,7 +58,7 @@ def herbalism_kit_proficiency_bonus(args):
     if "exp" in args:
         return "+" + 2 * proficiencyBonus
 
-    if "pro" in args:
+    if "pro" in args or if "prof" in args:
         return "+" + proficiencyBonus    
     
     # If neither 'pro' or 'exp' are in args, look for Tool Check values

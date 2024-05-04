@@ -6,9 +6,10 @@ embed
 # NOTE: This does not do stat checks or use tool proficiencies, it is currently only the gathering table lookup
 
 # Usage:
-#   !gather             		# Gather 1 time from the forest (default)
-#   !gather desert      		# Gather 1 time from the desert
-#   !gather 'Outer Plane' 20 	# Gather 20 times from the outer plane
+#   !gather             			# Gather 1 time from the forest (default)
+#   !gather -c 2             		# Gather 2 times from the forest
+#   !gather desert      			# Gather 1 time from the desert
+#   !gather 'Outer Plane' -c 20 	# Gather 20 times from the outer plane
 
 # Constants 
 d1, d2, d4, d6, d8, d10, d12 = "1", "1d2", "1d4", "1d6", "1d8", "1d10", "1d12"
@@ -71,76 +72,62 @@ REAGENTS =  {
 }
 
 # Arguments
+
+def parse_biome(args):
+	for biome in biome_names():
+		if biome in args:
+			return biome
+	return "forest"
+
+def parse_count(args):
+	a = argparse(&ARGS&)
+	bonus = (''.join(a.get('c', type_=lambda x: "+"+x if x[0] not in "+-" else x)))
+	return 1 if bonus == "" else int(bonus)
+
 def parse_args(args):
-    biome = "forest"
-    count = 1
-
-    arg_count = len(args)
-    if arg_count > 0:
-        biome = args[0].lower()
-        
-    if arg_count > 1:
-        if args[1].isnumeric():
-            count = int(args[1])
-            if count < 1 or count > 100:
-                err(f"Second argument must be a number between 1 and 100.")
-        else:
-            err(f"Second argument must be a number between 1 and 100.")
-            
-    if count > 100:
+    biome = parse_biome(args)
+    count = parse_count(args)
+    if count > 100 or count < 1:
         err(f"Could not forage more than 100 times, try a smaller number.")
-
     return biome, count
 
 # Utility
 def biome_table_lookup(name):
-	if name not in REAGENTS:
-		return None
-	return REAGENTS[name][TABLE]
+    return REAGENTS.get(name, {}).get(TABLE, None)
 
 def range_lookup(table, roll):
-	for row in table:
-		if row[0] <= roll <= row[1]: 
-			return row
-	return None
+    matches = [row for row in table if row[0] <= roll <= row[1]]
+    return matches[0] if matches else None
 
 def color_lookup(name):
 	if name not in REAGENTS:
 		return "#FF0000"
 	return REAGENTS[name][COLOR]
 
+def biome_names():
+	return list(REAGENTS.keys())
+
 def roll_lookup(name, roll):
 	table = biome_table_lookup(name)
 	if table == None:
-			# Later pull these from the table itself
-			all_biomes = REAGENTS.keys()
-			err(f"Could not find biome named '{name}'. Please choose from {', '.join(all_biomes)}.")
+		err(f"Could not find biome named '{name}'. Please choose from {', '.join(biome_names())}.")
 	
 	t = range_lookup(table, roll)
 	if t == None:
 		return ["nothing"]
+     
 	d, r, v = t[DICE_INDEX], t[RARITY_INDEX], t[VARIETY_INDEX]
 	c = vroll(d).total
-	fname = r + " " + v 
-	return [fname] * c
+	return [r + " " + v] * c
 
 def remove_items(test_list, item):
-	res = [i for i in test_list if i != item] 
-	return res 
+	return [i for i in test_list if i != item] 
 
 def foraged_display_name(foraged, count):
-	if count == 0:
-		return "No " + foraged + "s" # Should be impossible
-	if count == 1:
-		return "1x " + foraged
-	return str(count) + "x " + foraged + "s"
+	return f"No {foraged}s" if count == 0 else f"{count}x {foraged}" + ("s" if count > 1 else "")
 
 def count_of(items, item):
-	c = 0
-	for this_item in items:
-		if item == this_item:
-			c = c + 1
-	return c
+	return items.count(item)
 
 # Core Logic
 def simulate_foraging(forage_count):
