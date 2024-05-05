@@ -2,26 +2,62 @@ embed
 <drac2>
 
 # Initial Avrae implementation of Kibble's Crafting v1.07 Gathering Tables
-# NOTE: This does not do stat checks or use tool proficiencies, it is currently only doing the gathering table lookup
+# This will do the appropraite skill checks and lookups based on the number of successful checks
 #
-# Arguments can be passed in any order, and defaults are biome: forest, count: 1, type: reagents
+# Arguments can be passed in any order.
 #
-# Usage:
-#   !gather                           # Gather reagents 1 time from the forest
+# Usage examples:
+# 
+#   !gather                           # Attempt to gather one reagent from the forest
 #
-#   !gather game                      # Hunt for game 1 time in the forest
-#   !gather materials                 # Gather materials 1 time in the forest
-#   !gather reagents                  # Gather reagents 1 time in the forest
+# You can specify the gathering (defaults to reagents)
 #
-#   !gather -rr 2                     # Gather reagents 2 times from the forest
+#   !gather game                      # Hunt for game
+#   !gather materials                 # Gather materials
+#   !gather reagents                  # Gather reagents
+#
+# You can specify the number of times to gather (defaults to 1)
+# 
+#   !gather -rr 2                     # Gather reagents 2 times from the forest (max 50)
+#
+# You can specify the biome (detaults to forest):
+#
 #   !gather desert                    # Gather reagents 1 time from the desert
 #   !gather 'Outer Plane' -rr 20      # Gather reagents 20 times from the outer plane
-#   !gather -rr 5 underground game    # Hunt game 5 times in the underground (different argument order)
+#
+# You can specify proficiency or expertise for the check
+#   !gather exp                       # Gather reagents with expertise
+#   !gather pro                       # Gather reagents with proficiency
+# 
+# You can specify the standard mofifiers for the check:
+#   !gather -b +2                     # Gather reagents with a +2 bonus
+#   !gather adv                       # Gather reagents with advantage (or disadvantage)
+#   !gather guidance                  # Gather reagents with guidance
+#
+# You can also combine them all together.
+# This gathers materials in the caves 10 times with proficiency, advantage, guidance, and a +2 bonus 
+# 
+#   !gather materials caves pro adv guidance -b 2 -rr 10 
+#
+# Notes: 
+# - This script will automatically use Herbalism Kit Proficiency & Expertise if the player is using Tool Check (https://avrae.io/dashboard/workshop/630b0e39b85ea38890666c08)
+#   Passing in 'pro' or 'exp' will override any Tool Check Values present.
+#
+# - Checks will automatically use the highest ability score, no need to pass any in. 
+#  [TODO] In the future this can be overriden. 
+#
+# - This will automatically use the appropriate skill for the check.
+# - When performing skill checks, this automatically uses Jack of All Trades, Proficiency/Expertise, Halfling Luck, and Reliable Talent without needing to pass in any values.
+#  [TODO] In the future this can be overriden. 
 
 # Constants 
+MAX_ATTEMPTS = 50 # More than this and it times out
 d1, d2, d4, d6, d8, d10, d12 = "1", "1d2", "1d4", "1d6", "1d8", "1d10", "1d12"
 COLOR, TABLE, DC = "color", "table", "dc"
 DICE_INDEX, RARITY_INDEX, VARIETY_INDEX = 2, 3, 4
+
+SURVIVAL, WISDOM, STRENGTH, DEXTERITY = "survival", "wisdom", "strength", "dexterity"
+HERBALISM_KIT = "Herbalism Kit"
 
 # Gathering Types
 REAGENTS, MATERIALS, GAME = "reagents", "materials", "game"
@@ -192,9 +228,9 @@ TABLE_MAP = {
 }
 
 VERB_MAP = {
-    REAGENTS: "gathering reagents",
-    MATERIALS: "gathering materials",
-    GAME: "hunting game"
+    REAGENTS: "gathering",
+    MATERIALS: "gathering",
+    GAME: "hunting"
 }
 
 # Arguments
@@ -226,17 +262,22 @@ def parse_type(args):
             return arg
     return REAGENTS
 
+def parse_proficiency(args):
+    expertise = "exp" in args
+    proficiency = "pro" in args or "prof" in args
+    return proficiency, expertise
+
 def parse_args(args):
     count = parse_count(args)
-    if count > 100 or count < 1:
-        err(f"Cannot gather more than 100 times, try a smaller number.")
+    if count > MAX_ATTEMPTS or count < 1:
+        err(f"Cannot gather more than {MAX_ATTEMPTS} times, try a smaller number.")
 
     type = parse_type(args)
     gather_table = gather_table_for_type(type)
     biome = parse_biome(gather_table, args)
     skill = parse_skill(args)
 
-    return biome, count, type, skill, gather_table
+    return args, biome, count, type, skill, gather_table
 
 # Utility
 def gather_table_for_type(type):
@@ -249,10 +290,15 @@ def range_lookup(table, roll):
     matches = [row for row in table if row[0] <= roll <= row[1]]
     return matches if matches else [None]
 
-def color_lookup(name):
+def color_for_biome_lookup(name):
     if name not in BIOME_METADATA_TABLE:
         err(f"Looking for color of unknown biome '{name}'.")
     return BIOME_METADATA_TABLE[name][COLOR]
+
+def dc_for_biome_lookup(name):
+    if name not in BIOME_METADATA_TABLE:
+        err(f"Looking for DC of unknown biome '{name}'.")
+    return BIOME_METADATA_TABLE[name][DC]
 
 def biome_names(gather_table):
     return list(gather_table.keys())
@@ -262,14 +308,10 @@ def verb_for_type(type):
 
 def lookup_result(table):
     dice = table[DICE_INDEX]
-
     rarity = table[RARITY_INDEX]
-    variety = None
-
-    if len(table) > VARIETY_INDEX:
-        variety = table[VARIETY_INDEX]
-
+    variety = table[VARIETY_INDEX] if len(table) > VARIETY_INDEX else None
     count = vroll(dice).total
+
     if variety == None:
         return [rarity] * count
     
@@ -280,14 +322,9 @@ def roll_lookup(gather_table, name, roll):
     if found_biome_table == None:
         err(f"Could not find biome named '{name}'. Please choose from {', '.join(biome_names(gather_table))}.")
     
-    table_list = range_lookup(found_biome_table, roll)
-    results = []
-    for table in table_list:
-        if table == None:
-            results.append(["nothing"])
-        else:
-            results.append(lookup_result(table))
-    return results
+    table_list = range_lookup(found_biome_table, roll.total)
+    return [lookup_result(table) if table else ["nothing"] for table in table_list]
+    
 
 def remove_items(test_list, item):
     return [i for i in test_list if i != item] 
@@ -301,18 +338,94 @@ def foraged_display_name(foraged, count):
 def count_of(items, item):
     return items.count(item)
 
+# Skill Checks
+def roll_for_skill(args, skill, addedBonus = None):
+    ch = character()
+    a = argparse(args)
+
+    # Parse for advantage
+    adv = a.adv(boolwise=True)
+
+    # Halfling Luck: Grab the reroll number if the character has the csetting reroll or default to None
+    reroll_number = ch.csettings.get("reroll", None)
+
+    # Grab a minimum from our args like a standard !check, (-mc #) or set it to 10 if the character has the csetting 'talent' set to True and has proficiency or expertise in the chosen skill.
+    minimum_check = a.last('mc', None, int) or (10 if ch.csettings.get("talent", False) and ch.skills[skill].prof>=1 else None)
+    
+    # Add bonuses, if any and add them to our roll. 
+    bonus = (''.join(a.get('b', type_=lambda x: "+"+x if x[0] not in "+-" else x))) + ('+1d4' if a.get('guidance') else '')
+
+    if addedBonus:
+        bonus = bonus + addedBonus
+
+    return vroll(ch.skills[skill].d20(adv, reroll_number, minimum_check) + bonus)
+
+def best_searching_stat():
+    stats = {STRENGTH: strength, DEXTERITY: dexterity, WISDOM: wisdom}
+    return max(stats, key=stats.get)
+
+def best_hunting_stat():
+    stats = {DEXTERITY: dexterity, WISDOM: wisdom}
+    return max(stats, key=stats.get)
+    
+def herbalism_kit_proficiency_bonus(proficiency, expertise):
+    if expertise:
+        return "+" + 2 * proficiencyBonus
+
+    if proficiency:
+        return "+" + proficiencyBonus    
+    
+    # If neither 'pro' or 'exp' are in args, look for Tool Check values
+    cvars = character().cvars
+    if "eTools" in cvars and HERBALISM_KIT in cvars["eTools"]:
+        return " +" + 2 * proficiencyBonus 
+    
+    if "pTools" in cvars and HERBALISM_KIT in cvars["pTools"]:
+        return "+" + proficiencyBonus
+
+    return None
+
+def survival_proficiency_bonus():
+    survival = character().skills[SURVIVAL]
+    return "+ " + survival.prof * proficiencyBonus
+
+
+def survival_modifier_bonus():
+    survival = character().skills[SURVIVAL]
+    if survival.prof >= 1:
+        return "+ " + survival.value
+    return None
+
+def arg_parse_action_type(args):
+    for action in ALLOWED_GATHER_COMMANDS:
+        if action in args:
+            return action
+    return None
+
+def skill_roll_for_action(args, action):
+    proficiency, expertise = parse_proficiency(args)
+
+    if action == REAGENTS:
+        return roll_for_skill(args, WISDOM, herbalism_kit_proficiency_bonus(proficiency, expertise))
+    
+    if action == MATERIALS:
+        return roll_for_skill(args, best_searching_stat(), survival_proficiency_bonus())
+    
+    if action == GAME:
+        return roll_for_skill(args, best_hunting_stat(), survival_modifier_bonus())
+    
+    return None
+
 # Core Logic
-def simulate_foraging(gather_table, forage_count):
+def simulate_foraging(gather_table):
     all_rolls = []
     all_foraged = []
-    for i in range(forage_count):
-        forage_roll = vroll("1d100").total
-        foraged_array = roll_lookup(gather_table, biome, forage_roll)
-        all_rolls.append(str(forage_roll))
-        for foraged in foraged_array:
-            all_foraged.extend(foraged)
+    forage_roll = vroll("1d100")
+    foraged_array = roll_lookup(gather_table, biome, forage_roll)
+    for foraged in foraged_array:
+        all_foraged.extend(foraged)
     
-    return all_rolls, all_foraged 
+    return forage_roll, all_foraged 
 
 def count_foraged(all_foraged):
     counted_all_foraged = []
@@ -328,14 +441,10 @@ def count_foraged(all_foraged):
     
     return counted_all_foraged
 
-def card_values(gather_table, verb, biome, rolls, found, skill):
-    dice_strings = len(rolls) + "d100 = `(" + ', '.join(rolls) + ")`"
-    color = color_lookup(biome)
-    title = f"{character().name} is {verb} in the {biome}"
-    if skill:
-        title += f" with their {skill} skill."
-    else:
-        title += "."
+def card_values(verb, type, biome, found, skill):
+    
+    color = color_for_biome_lookup(biome)
+    title = f"{character().name} is {verb} {type} in the {biome}."
 
     if len(found) > 1:
         description = f"They found:\n"
@@ -344,16 +453,64 @@ def card_values(gather_table, verb, biome, rolls, found, skill):
     else:
         description = f"They found {found[0]}!" if found else "They found nothing!"
 
-    footer = f"{dice_strings}"
-    return title, description, footer, color
+    
+    return title, description, color
 
-biome, attempt_count, type, skill, gather_table = parse_args(&ARGS&)
+def strip_parens(dice_string):
+    while True:
+        start = dice_string.find("(")
+        end = dice_string.find(")")
+        if start == -1 or end == -1:
+            return dice_string        
+        new_dice_string = dice_string[:start] + dice_string[end+1:]
+        if new_dice_string == dice_string:
+            return dice_string
+        dice_string = new_dice_string
+
+def card_footer(skill_rolls, dc, verb):
+    footer = f"**Check DC**: {dc}\n\n"
+    if len(skill_rolls) == 1:
+        skill_roll, forage_roll = skill_rolls[0]
+        footer += f"**{verb.title()} Check**: {skill_roll}"
+        if forage_roll:
+            footer += f"; Success!\n**Lookup Check**: {forage_roll}\n"
+        else:
+            footer += f"; Failure!\n"
+    else:
+        dice_string = strip_parens(skill_rolls[0][0].dice)        
+
+        skill_roll_values = [skill_roll.total for skill_roll, _ in skill_rolls]
+        forage_roll_values = [forage_roll.total for _, forage_roll in skill_rolls if forage_roll]        
+        dice_values = ', '.join([f"{value}" if value >= dc else f"~~{value}~~" for value in skill_roll_values])
+        footer += f"**{verb.title()} Checks**: {len(skill_rolls)} x ({dice_string}) = ({dice_values})\n"
+        if len(forage_roll_values) > 0:
+            dice_values = ', '.join([str(value) for value in forage_roll_values])
+            footer += f"**Lookup Checks**: {len(forage_roll_values)}d100 = ({dice_values})\n"
+
+    return footer
+    
+def forage(gather_table, attempt_count, dc):
+    forage_results = []
+    skill_rolls = []
+    for i in range(attempt_count): 
+        skill_roll = skill_roll_for_action(args, type)
+        success = skill_roll.total >= dc
+        forage_roll = None
+        if success:
+            forage_roll, results = simulate_foraging(gather_table)
+            forage_results.extend(results)
+        skill_rolls.append([skill_roll, forage_roll])
+    return skill_rolls, forage_results
+
+# Core Logic
+
+args, biome, attempt_count, type, skill, gather_table = parse_args(&ARGS&)
 verb = verb_for_type(type)
-
-forage_rolls, forage_results = simulate_foraging(gather_table, attempt_count)
+dc = dc_for_biome_lookup(biome)
+skill_rolls, forage_results = forage(gather_table, attempt_count, dc)
 counted_results = count_foraged(forage_results)
-title, description, footer, color = card_values(gather_table, verb, biome, forage_rolls, counted_results, skill)
-
+title, description, color = card_values(verb, type, biome, counted_results, skill)
+footer = card_footer(skill_rolls, dc, verb)
 
 </drac2>
 

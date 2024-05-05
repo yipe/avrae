@@ -58,7 +58,7 @@ def herbalism_kit_proficiency_bonus(args):
     if "exp" in args:
         return "+" + 2 * proficiencyBonus
 
-    if "pro" in args or if "prof" in args:
+    if "pro" in args or "prof" in args:
         return "+" + proficiencyBonus    
     
     # If neither 'pro' or 'exp' are in args, look for Tool Check values
