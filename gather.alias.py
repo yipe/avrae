@@ -48,11 +48,9 @@ embed
 #   Passing in 'pro' or 'exp' will override any Tool Check Values present.
 #
 # - Checks will automatically use the highest ability score, no need to pass any in. 
-#  [TODO] In the future this can be overriden. 
 #
 # - This will automatically use the appropriate skill for the check.
 # - When performing skill checks, this automatically uses Jack of All Trades, Proficiency/Expertise, Halfling Luck, and Reliable Talent without needing to pass in any values.
-#  [TODO] In the future this can be overriden. 
 
 # Constants 
 MAX_ATTEMPTS = 50 # More than this and it times out
