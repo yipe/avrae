@@ -34,10 +34,14 @@ embed
 #   !gather adv                       # Gather reagents with advantage (or disadvantage)
 #   !gather guidance                  # Gather reagents with guidance
 #
+# You can optionally change the DC for the biome
+#
+#  !gather -dc 15                    # Gather reagents with a DC of 15, representing some added difficulty
+#
 # You can also combine them all together.
-# This gathers materials in the caves 10 times with proficiency, advantage, guidance, and a +2 bonus 
+# This gathers materials in the caves 10 times with proficiency, advantage, guidance, +2 bonus, and a DC of 15
 # 
-#   !gather materials caves pro adv guidance -b 2 -rr 10 
+#   !gather materials caves pro adv guidance -b 2 -rr 10 -dc 15
 #
 # Notes: 
 # - This script will automatically use Herbalism Kit Proficiency & Expertise if the player is using Tool Check (https://avrae.io/dashboard/workshop/630b0e39b85ea38890666c08)
@@ -240,6 +244,11 @@ def parse_biome(gather_table, args):
             return biome
     return "forest"
 
+def parse_dc(args):
+    a = argparse(args)
+    bonus = ''.join(a.get('dc'))
+    return int(bonus) if bonus else None
+
 def parse_skill(args):
     the_string = []
     ch = character()
@@ -276,8 +285,9 @@ def parse_args(args):
     gather_table = gather_table_for_type(type)
     biome = parse_biome(gather_table, args)
     skill = parse_skill(args)
+    dc = parse_dc(args)
 
-    return args, biome, count, type, skill, gather_table
+    return args, biome, count, type, skill, dc, gather_table
 
 # Utility
 def gather_table_for_type(type):
@@ -504,9 +514,10 @@ def forage(gather_table, attempt_count, dc):
 
 # Core Logic
 
-args, biome, attempt_count, type, skill, gather_table = parse_args(&ARGS&)
+args, biome, attempt_count, type, skill, dc, gather_table = parse_args(&ARGS&)
 verb = verb_for_type(type)
-dc = dc_for_biome_lookup(biome)
+if not dc:
+    dc = dc_for_biome_lookup(biome)
 skill_rolls, forage_results = forage(gather_table, attempt_count, dc)
 counted_results = count_foraged(forage_results)
 title, description, color = card_values(verb, type, biome, counted_results, skill)
