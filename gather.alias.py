@@ -13,10 +13,10 @@ embed
 #   !gather materials                 # Gather materials 1 time in the forest
 #   !gather reagents                  # Gather reagents 1 time in the forest
 #
-#   !gather -c 2                      # Gather reagents 2 times from the forest
+#   !gather -rr 2                     # Gather reagents 2 times from the forest
 #   !gather desert                    # Gather reagents 1 time from the desert
-#   !gather 'Outer Plane' -c 20       # Gather reagents 20 times from the outer plane
-#   !gather -c 5 underground game     # Hunt game 5 times in the underground (different argument order)
+#   !gather 'Outer Plane' -rr 20      # Gather reagents 20 times from the outer plane
+#   !gather -rr 5 underground game    # Hunt game 5 times in the underground (different argument order)
 
 # Constants 
 d1, d2, d4, d6, d8, d10, d12 = "1", "1d2", "1d4", "1d6", "1d8", "1d10", "1d12"
@@ -204,9 +204,20 @@ def parse_biome(gather_table, args):
             return biome
     return "forest"
 
+def parse_skill(args):
+    the_string = []
+    ch = character()
+
+    for name,skill in ch.skills:
+        for arg in args:
+            if arg.lower().replace(' ','') == name.lower():
+                return arg.lower().capitalize()
+    
+    return None
+    
 def parse_count(args):
     a = argparse(&ARGS&)
-    bonus = (''.join(a.get('c', type_=lambda x: "+"+x if x[0] not in "+-" else x)))
+    bonus = (''.join(a.get('rr', type_=lambda x: "+"+x if x[0] not in "+-" else x)))
     return 1 if bonus == "" else int(bonus)
 
 def parse_type(args):
@@ -216,15 +227,16 @@ def parse_type(args):
     return REAGENTS
 
 def parse_args(args):
-    type = parse_type(args)
-    gather_table = gather_table_for_type(type)
-    biome = parse_biome(gather_table, args)
     count = parse_count(args)
-
     if count > 100 or count < 1:
         err(f"Cannot gather more than 100 times, try a smaller number.")
 
-    return biome, count, type, gather_table
+    type = parse_type(args)
+    gather_table = gather_table_for_type(type)
+    biome = parse_biome(gather_table, args)
+    skill = parse_skill(args)
+
+    return biome, count, type, skill, gather_table
 
 # Utility
 def gather_table_for_type(type):
@@ -316,27 +328,32 @@ def count_foraged(all_foraged):
     
     return counted_all_foraged
 
-def card_values(gather_table, verb, biome, rolls, found):
+def card_values(gather_table, verb, biome, rolls, found, skill):
     dice_strings = len(rolls) + "d100 = `(" + ', '.join(rolls) + ")`"
     color = color_lookup(biome)
-    title = f"{character().name} is {verb} in the {biome}."
-    description = f"They found nothing!"
-    if len(found) == 1:
-        description = f"They found {found[0]}!"
-    elif len(found) > 1:
+    title = f"{character().name} is {verb} in the {biome}"
+    if skill:
+        title += f" with their {skill} skill."
+    else:
+        title += "."
+
+    if len(found) > 1:
         description = f"They found:\n"
         for foraged in found:
             description += "  • " + foraged + "\n"
+    else:
+        description = f"They found {found[0]}!" if found else "They found nothing!"
 
     footer = f"{dice_strings}"
     return title, description, footer, color
 
-biome, attempt_count, type, gather_table = parse_args(&ARGS&)
+biome, attempt_count, type, skill, gather_table = parse_args(&ARGS&)
 verb = verb_for_type(type)
 
 forage_rolls, forage_results = simulate_foraging(gather_table, attempt_count)
 counted_results = count_foraged(forage_results)
-title, description, footer, color = card_values(gather_table, verb, biome, forage_rolls, counted_results)
+title, description, footer, color = card_values(gather_table, verb, biome, forage_rolls, counted_results, skill)
+
 
 </drac2>
 
